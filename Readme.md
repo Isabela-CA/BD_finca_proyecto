@@ -146,9 +146,13 @@ A continuación, se presentan ejemplos de consultas SQL que pueden ejecutarse en
 **Producción total por mes**
 
 *SELECT DATE_FORMAT(fecha_produccion, '%Y-%m') AS mes,*
-      *SUM(cantidad_producida) AS total_producido*
+
+  *SUM(cantidad_producida) AS total_producido*
+
 *FROM produccion*
+
 *GROUP BY mes*
+
 *ORDER BY mes DESC;*
 
 **Descripción:** Muestra la cantidad total producida en cada mes, útil para evaluar la productividad general.
@@ -156,13 +160,21 @@ A continuación, se presentan ejemplos de consultas SQL que pueden ejecutarse en
 **Promedio de duración de actividades por área**
 
 *SELECT promedio_area.area,*
-       *ROUND(promedio_area.promedio_horas, 2) AS promedio_horas*
+
+  *ROUND(promedio_area.promedio_horas, 2) AS promedio_horas*
+
 *FROM (*
-    *SELECT area,*
-           *AVG(duracion_horas) AS promedio_horas*
-    *FROM actividad_laboral*
-    *GROUP BY area*
+
+  *SELECT area,*
+
+  *AVG(duracion_horas) AS promedio_horas*
+
+  *FROM actividad_laboral*
+
+  *GROUP BY area*
+
 *) AS promedio_area*
+
 *ORDER BY promedio_area.promedio_horas DESC;*
 
 **Descripción:** Calcula el tiempo promedio dedicado a cada área de trabajo, útil para identificar sobrecargas y cuellos de botella.
@@ -177,20 +189,33 @@ Permiten ejecutar secuencias de instrucciones SQL encapsuladas bajo un nombre, e
 Son útiles para operaciones complejas como registrar una venta, generar un reporte o procesar datos masivamente.
 
 *DELIMITER //*
+
 *CREATE PROCEDURE actualizar_inventario_manual(*
-    *IN p_id_producto INT,*
-    *IN p_nueva_cantidad DECIMAL(10,0)*
+
+  *IN p_id_producto INT,*
+
+  *IN p_nueva_cantidad DECIMAL(10,0)*
+
 *)*
+
 *BEGIN*
-    *UPDATE inventario*
-    *SET cantidad_disponible = p_nueva_cantidad,*
-        *fecha_ultima_actualizacion = CURDATE()*
-    *WHERE id_producto = p_id_producto;*
+
+  *UPDATE inventario*
+
+  *SET cantidad_disponible = p_nueva_cantidad,*
+
+  *fecha_ultima_actualizacion = CURDATE()*
+
+  *WHERE id_producto = p_id_producto;*
+
 *END //*
+
 *DELIMITER ;*
 
 *-- Ejemplo de uso:*
+
 *CALL actualizar_inventario_manual(1, 50);*
+
 *SELECT * FROM inventario WHERE id_producto = 1;*
 
 **Descripción:**
@@ -201,19 +226,31 @@ Son similares a los procedimientos, pero devuelven un valor y se pueden usar dir
 Sirven para cálculos recurrentes como aplicar impuestos, calcular descuentos o márgenes de ganancia.
 
 *DELIMITER //*
+
 *CREATE FUNCTION total_horas_laboradas_empleado(pid INT)*
+
 *RETURNS DECIMAL(10,2)*
+
 *DETERMINISTIC*
+
 *BEGIN*
-    *DECLARE total DECIMAL(10,2);*
-    *SELECT SUM(duracion_horas) INTO total*
-    *FROM actividad_laboral*
-    *WHERE id_empleado = pid;*
-    *RETURN IFNULL(total,0);*
+
+*DECLARE total DECIMAL(10,2);*
+
+  *SELECT SUM(duracion_horas) INTO total*
+
+  *FROM actividad_laboral*
+
+  *WHERE id_empleado = pid;*
+
+*RETURN IFNULL(total,0);*
+
 *END //*
+
 *DELIMITER ;*
 
 *-- Ejemplo de uso:*
+
 *SELECT total_horas_laboradas_empleado(3);*
 
 **Descripción:**
@@ -225,16 +262,27 @@ Se ejecutan automáticamente en respuesta a ciertos eventos INSERT, UPDATE o DEL
 Sirven para mantener la coherencia de los datos o generar acciones automáticas, como auditorías o actualizaciones de stock.
 
 *DELIMITER //*
+
 *CREATE TRIGGER trg_finalizar_mantenimiento*
+
 *AFTER UPDATE ON mantenimiento_maquinaria*
+
 *FOR EACH ROW*
+
 *BEGIN*
-    *IF NEW.fecha_fin IS NOT NULL AND OLD.fecha_fin IS NULL THEN*
-        *UPDATE maquinaria*
-        *SET estado = 'operativa'*
-        *WHERE id_maquinaria = NEW.id_maquinaria;*
-    *END IF;*
+
+*IF NEW.fecha_fin IS NOT NULL AND OLD.fecha_fin IS NULL THEN*
+
+  *UPDATE maquinaria*
+
+  *SET estado = 'operativa'*
+
+  *WHERE id_maquinaria = NEW.id_maquinaria;*
+
+*END IF;*
+
 *END//*
+
 *DELIMITER ;*
 
 **Descripción:**
@@ -246,17 +294,27 @@ Permiten ejecutar tareas automáticamente en un intervalo de tiempo específico,
 Son útiles para generar reportes periódicos, eliminar registros antiguos o realizar copias de seguridad automáticas.
 
 *CREATE EVENT actualizar_precio_promedio_producto*
+
 *ON SCHEDULE EVERY 1 MONTH*
+
 *STARTS '2025-09-01 00:00:00'*
+
 *DO*
+
 *UPDATE producto p*
+
 *SET p.precio_promedio_compra = (*
-    *SELECT AVG(dc.precio_unitario)*
-    *FROM detalle_compra dc*
-    *WHERE dc.id_producto = p.id_producto*
+
+  *SELECT AVG(dc.precio_unitario)*
+
+  *FROM detalle_compra dc*
+
+  *WHERE dc.id_producto = p.id_producto*
+
 *);*
 
 *-- Nota: Asegúrate de activar el programador de eventos:*
+
 *SET GLOBAL event_scheduler = ON;*
 
 **Descripción:**
