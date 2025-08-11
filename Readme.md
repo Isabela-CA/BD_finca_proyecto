@@ -320,9 +320,60 @@ Son útiles para generar reportes periódicos, eliminar registros antiguos o rea
 **Descripción:**
 Calcula mensualmente el precio promedio de compra de cada producto usando los registros de detalle_compra y actualiza el campo precio_promedio_compra en la tabla producto.
 
+#### Roles de Usuario y Permisos
+
+creamos un usuario de la siguiente manera
+create user 
+
+-- **1. creacion del usuario al administrador de la finca**
+CREATE USER 'admin_finca'@'localhost' IDENTIFIED BY 'admin';
+GRANT ALL PRIVILEGES ON finca_agricola.* TO 'admin_finca'@'localhost';
+
+Donde dice localhost es donde puedemos conectarnos desde cualquier IP o desde el mismo servidor como en este caso
+
+Para dar privilegios a los roles lo hacemos de la siguiente manera 
+Si es para administrar toda la BD escribimos GRANT ALL PRIVILEGES ON (nombre_BD)* TO 'nombre_usuario'@'localhost';
+
+
+-- **2. creacion del usuario vendedor**
+CREATE USER 'vendedor_finca'@'localhost' IDENTIFIED BY 'Vendedor'; 
+GRANT SELECT, INSERT, UPDATE ON finca_agricola.venta TO 'vendedor_finca'@'localhost';
+GRANT SELECT, INSERT, UPDATE ON finca_agricola.inventario TO 'vendedor_finca'@'localhost';
+GRANT SELECT ON finca_agricola.producto TO 'vendedor_finca'@'localhost';
+
+Al usuario vendedor le damos en este caso privilegio de consultar(select),agregar(insert) y modificar(update), las tablas inventario y venta; tiene el permiso de solo consutar en la tabla producto 
+Escribimos el nombre de la BD que le queremos dar esos permisos, en este caso el nombre es finca_agricola.inventario(en la posicion donde dice inventario, colocamos el nombre de la tabla a la cual le queremos dar permiso)
+
+-- **3. creacion del usuario contador**
+CREATE USER 'contador_finca'@'localhost' IDENTIFIED BY 'Contador';
+GRANT SELECT ON finca_agricola.venta TO 'contador_finca'@'localhost';
+GRANT SELECT ON finca_agricola.costos TO 'contador_finca'@'localhost';
+
+-- **4. creacion del usuario que se encarga de la produccion**
+CREATE USER 'produccion_finca'@'localhost' IDENTIFIED BY 'Produccion';
+GRANT SELECT, INSERT, UPDATE ON finca_agricola.produccion TO 'produccion_finca'@'localhost';
+GRANT SELECT ON finca_agricola.maquinaria TO 'produccion_finca'@'localhost';
+GRANT SELECT ON finca_agricola.inventario TO 'produccion_finca'@'localhost';
+
+-- **5. creacion del usuario de mantenimiento**
+CREATE USER 'mantenimiento_finca'@'localhost' IDENTIFIED BY 'Mantenimiento';
+GRANT SELECT, INSERT, UPDATE ON finca_agricola.mantenimiento_maquinaria TO 'mantenimiento_finca'@'localhost';
+GRANT SELECT ON finca_agricola.maquinaria TO 'mantenimiento_finca'@'localhost';
+
+#### Conclusion
+Crear usuarios con **roles** en MySQL es la forma más segura y organizada porque:
+
+* **Separas identidad y permisos** : los usuarios son solo cuentas, los roles contienen los privilegios.
+* **Cumples el principio de menor privilegio** : cada usuario solo accede a lo que necesita.
+* **Facilitas la administración** :  cambias un rol y afecta automáticamente a todos los usuarios que lo tienen.
+* **Escalas fácilmente** : agregar o quitar usuarios es rápido, sin repetir configuraciones de permisos.
+
+Básicamente, con roles gestionas permisos una sola vez y mantienes la base de datos más segura y ordenada.
+
+
 #### Contribuciones
 
-**Isabella**
+**Isabela**
 
 - Creación de 8 tablas en *ddl.sql* (modelo de base de datos y relaciones).
 
