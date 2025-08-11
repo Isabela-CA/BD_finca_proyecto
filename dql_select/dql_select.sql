@@ -379,3 +379,370 @@ where dv.precio_unitario > (
     from detalle_venta
     where id_producto = dv.id_producto
 );
+
+-- 51. Mostrar el historial de actualizaciones de inventario en el último mes.
+SELECT *
+FROM inventario
+WHERE fecha_ultima_actualizacion >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH);
+-- 52. Consultar el inventario actualizado a una fecha específica.
+SELECT i.*, p.nombre
+FROM inventario i
+INNER JOIN producto p
+ON i.id_producto=p.id_producto
+WHERE i.fecha_ultima_actualizacion = '2025-08-02';
+-- 53. Listar el inventario de productos procesados.
+SELECT 
+p.nombre AS producto,
+i.cantidad_disponible,
+i.fecha_ultima_actualizacion
+FROM inventario i
+INNER JOIN producto p ON i.id_producto = p.id_producto
+WHERE p.tipo = 'procesado';
+-- 54. Mostrar las unidades de inventario de productos ganaderos.
+SELECT p.nombre, i.cantidad_disponible, p.tipo
+FROM inventario i
+INNER JOIN producto p ON i.id_producto = p.id_producto
+WHERE p.tipo = 'ganadero';
+-- 55. Productos que no han tenido ventas en los últimos 15 dias.
+SELECT p.*, v.fecha_venta
+FROM producto p
+LEFT JOIN detalle_venta dv ON p.id_producto = dv.id_producto
+LEFT JOIN venta v ON dv.id_venta = v.id_venta
+WHERE v.fecha_venta > CURDATE() - INTERVAL 15 DAY;
+-- 56. Consultar las ventas realizadas en el último mes.
+SELECT v.id_venta, v.fecha_venta, c.nombre AS cliente, v.total
+FROM venta v
+JOIN cliente c ON v.id_cliente = c.id_cliente
+WHERE v.fecha_venta >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+ORDER BY v.fecha_venta DESC;
+-- 57. Calcular el total de ventas del último mes.
+SELECT SUM(v.total) AS total_ventas_ultimo_mes
+FROM venta v
+WHERE v.fecha_venta >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH);
+-- 58. Listar las 5 ventas más altas del año actual.
+SELECT v.id_venta, v.fecha_venta, c.nombre AS cliente, v.total
+FROM venta v
+JOIN cliente c ON v.id_cliente = c.id_cliente
+WHERE YEAR(v.fecha_venta) = YEAR(CURDATE())
+ORDER BY v.total DESC
+LIMIT 5;
+-- 59. Mostrar los clientes que más han comprado (por monto total).
+SELECT c.id_cliente, c.nombre, SUM(v.total) AS monto_total_compras
+FROM venta v
+JOIN cliente c ON v.id_cliente = c.id_cliente
+GROUP BY c.id_cliente, c.nombre
+ORDER BY monto_total_compras DESC;
+-- 60. Obtener el detalle de productos vendidos en una venta específica.
+SELECT dv.id_venta, p.nombre AS producto, dv.cantidad, dv.precio_unitario, 
+       (dv.cantidad * dv.precio_unitario) AS subtotal
+FROM detalle_venta dv
+JOIN producto p ON dv.id_producto = p.id_producto
+WHERE dv.id_venta = 368;
+-- 61. Listar las compras agrupadas por proveedor.
+SELECT p.id_proveedor, p.nombre AS proveedor, COUNT(co.id_compra) AS cantidad_compras, SUM(co.total) AS total_compras
+FROM compra co
+JOIN proveedor p ON co.id_proveedor = p.id_proveedor
+GROUP BY p.id_proveedor, p.nombre
+ORDER BY total_compras DESC;
+-- 62. Mostrar el historial de compras para un producto determinado.
+SELECT dc.id_producto, pr.nombre AS producto, co.id_compra, co.fecha_compra, dc.cantidad, dc.precio_unitario
+FROM detalle_compra dc
+JOIN producto pr ON dc.id_producto = pr.id_producto
+JOIN compra co ON dc.id_compra = co.id_compra
+WHERE dc.id_producto = 45
+ORDER BY co.fecha_compra DESC;
+-- 63. Ver las compras realizadas entre dos fechas.
+SELECT co.id_compra, p.nombre AS proveedor, co.fecha_compra, co.total
+FROM compra co
+JOIN proveedor p ON co.id_proveedor = p.id_proveedor
+WHERE co.fecha_compra BETWEEN '2025-01-01' AND '2025-03-31'
+ORDER BY co.fecha_compra;
+-- 64. Ver el total de compras por categoría de producto.
+SELECT pr.tipo AS categoria, SUM(dc.cantidad * dc.precio_unitario) AS total_compras
+FROM detalle_compra dc
+JOIN producto pr ON dc.id_producto = pr.id_producto
+GROUP BY pr.tipo
+ORDER BY total_compras DESC;
+-- 65. Proveedores con los que no se ha comprado en el último año.
+SELECT p.id_proveedor, p.nombre AS proveedor
+FROM proveedor p
+LEFT JOIN compra co ON p.id_proveedor = co.id_proveedor 
+    AND co.fecha_compra >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)
+WHERE co.id_compra IS NULL;
+-- 66. Obtener la producción total por mes.
+SELECT DATE_FORMAT(fecha_produccion, '%Y-%m') AS mes,
+    SUM(cantidad_producida) AS total_producido
+FROM produccion
+GROUP BY mes
+ORDER BY mes DESC;
+-- 67. Calcular la producción mensual de cada tipo de producto (agrícola, ganadero, procesado).
+SELECT DATE_FORMAT(pn.fecha_produccion, '%Y-%m') AS mes,
+    pr.tipo AS categoria,
+    SUM(pn.cantidad_producida) AS total_categoria
+FROM produccion pn
+JOIN producto pr ON pn.id_producto = pr.id_producto
+GROUP BY mes, pr.tipo
+ORDER BY mes DESC, pr.tipo;
+-- 68. Listar la producción realizada por un empleado específico.
+SELECT pn.id_produccion, pn.fecha_produccion, pr.nombre AS producto, pn.cantidad_producida
+FROM produccion pn
+JOIN producto pr ON pn.id_producto = pr.id_producto
+WHERE pn.id_empleado = 78
+ORDER BY pn.fecha_produccion DESC;
+-- 69. Mostrar la producción donde se utilizó una máquina específica.
+SELECT pn.id_produccion, pn.fecha_produccion, pr.nombre AS producto, pn.cantidad_producida
+FROM produccion pn
+JOIN producto pr ON pn.id_producto = pr.id_producto
+WHERE pn.id_maquinaria = 140
+ORDER BY pn.fecha_produccion DESC;
+-- 70. Obtener los lotes de producción con menos de 1000 unidades producidas.
+SELECT l.id_lote, l.id_produccion, l.tamaño_lote, l.cantidad_producida_unidad
+FROM lote l
+WHERE l.cantidad_producida_unidad < 1000
+ORDER BY l.cantidad_producida_unidad ASC;
+-- 71. Calcular el promedio de producción diaria del último mes.
+SELECT ROUND(AVG(produccion_diaria), 2) AS promedio_diario
+FROM (
+    SELECT fecha_produccion, SUM(cantidad_producida) AS produccion_diaria
+    FROM produccion
+    WHERE fecha_produccion >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+    GROUP BY fecha_produccion
+) AS sub;
+-- 72. Consultar los empleados asignados al área de cultivo.
+SELECT id_empleado, nombre, apellido, cargo, area_asignada
+FROM empleado
+WHERE area_asignada = 'cultivo';
+-- 73. Listar empleados que han usado maquinaria en el último mes.
+SELECT DISTINCT e.id_empleado, e.nombre, e.apellido, e.cargo
+FROM empleado e
+JOIN empleado_maquinaria em ON e.id_empleado = em.id_empleado
+WHERE em.fecha_operacion >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH);
+-- 74. Listar empleados con salario superior a cierto valor.
+SELECT id_empleado, nombre, apellido, salario
+FROM empleado
+WHERE salario > 4000000
+ORDER BY salario DESC;
+-- 75. Empleados que no han registrado actividades en la última semana.
+SELECT e.id_empleado, e.nombre, e.apellido
+FROM empleado e
+LEFT JOIN actividad_laboral al 
+    ON e.id_empleado = al.id_empleado
+    AND al.fecha >= DATE_SUB(CURDATE(), INTERVAL 1 WEEK)
+WHERE al.id_actividad IS NULL;
+-- 76. Consultar el promedio de duración de las actividades laborales.
+SELECT ROUND(AVG(duracion_horas), 2) AS promedio_duracion_horas
+FROM actividad_laboral;
+-- 77. Listar todas las máquinas actualmente en mantenimiento.
+SELECT id_maquinaria, nombre, tipo, fecha_adquisicion, estado
+FROM maquinaria
+WHERE estado = 'mantenimiento';
+-- 78. Mostrar el historial de mantenimientos de una máquina específica.
+SELECT mm.id_mantenimiento, mm.id_maquinaria, m.nombre AS maquinaria, 
+    mm.fecha_inicio, mm.fecha_fin, mm.costo, mm.descripcion
+FROM mantenimiento_maquinaria mm
+JOIN maquinaria m ON mm.id_maquinaria = m.id_maquinaria
+WHERE mm.id_maquinaria = 115
+ORDER BY mm.fecha_inicio DESC;
+-- 79. Calcular el costo total de mantenimiento por máquina.
+SELECT m.id_maquinaria, m.nombre, SUM(mm.costo) AS costo_total
+FROM mantenimiento_maquinaria mm
+JOIN maquinaria m ON mm.id_maquinaria = m.id_maquinaria
+GROUP BY m.id_maquinaria, m.nombre
+ORDER BY costo_total DESC;
+-- 80. Identificar máquinas que no han tenido mantenimiento en más de 6 meses.
+SELECT m.id_maquinaria, m.nombre
+FROM maquinaria m
+LEFT JOIN mantenimiento_maquinaria mm 
+    ON m.id_maquinaria = mm.id_maquinaria
+    AND mm.fecha_inicio >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+WHERE mm.id_mantenimiento IS NULL;
+-- 81. Mostrar las máquinas más utilizadas en producción.
+SELECT m.id_maquinaria, m.nombre, COUNT(p.id_produccion) AS veces_utilizada
+FROM produccion p
+JOIN maquinaria m ON p.id_maquinaria = m.id_maquinaria
+GROUP BY m.id_maquinaria, m.nombre
+ORDER BY veces_utilizada DESC;
+-- 82. Mostrar costos asociados a un empleado específico.
+SELECT c.id_costos, c.tipo, c.monto, c.fecha, e.nombre, e.apellido
+FROM costos c
+JOIN empleado e ON c.id_empleado = e.id_empleado
+WHERE c.id_empleado = 69
+ORDER BY c.fecha DESC;
+-- 83. Calcular el total de costos operativos por área.
+SELECT e.area_asignada, SUM(c.monto) AS total_costos
+FROM costos c
+JOIN empleado e ON c.id_empleado = e.id_empleado
+GROUP BY e.area_asignada
+ORDER BY total_costos DESC;
+-- 84. Calcular el costo total de producción por mes.
+SELECT DATE_FORMAT(c.fecha, '%Y-%m') AS mes, SUM(c.monto) AS costo_total
+FROM costos c
+GROUP BY DATE_FORMAT(c.fecha, '%Y-%m')
+ORDER BY mes DESC;
+-- 85. Listar los costos asociados a una producción específica.
+SELECT c.id_costos, c.tipo, c.monto, c.fecha
+FROM costos c
+WHERE c.id_produccion = 578
+ORDER BY c.fecha DESC;
+-- 86. total de costos asociados a cada empleado
+SELECT 
+    e.nombre,
+    e.apellido,
+    SUM(c.monto) AS total_costos
+FROM costos c
+JOIN empleado e ON c.id_empleado = e.id_empleado
+GROUP BY e.id_empleado, e.nombre, e.apellido
+ORDER BY total_costos DESC;
+-- 87. Comparar ventas vs. producción del último trimestre.
+SELECT 
+    p.nombre AS producto,
+    COALESCE(SUM(dv.cantidad), 0) AS total_vendido,
+    COALESCE(SUM(pd.cantidad_producida), 0) AS total_producido
+FROM producto p
+LEFT JOIN detalle_venta dv 
+    ON p.id_producto = dv.id_producto
+LEFT JOIN venta v 
+    ON dv.id_venta = v.id_venta 
+    AND v.fecha_venta >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)
+LEFT JOIN produccion pd 
+    ON p.id_producto = pd.id_producto
+    AND pd.fecha_produccion >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)
+GROUP BY p.id_producto, p.nombre
+ORDER BY p.nombre;
+-- 88. Mostrar productos con alta venta pero bajo inventario.
+SELECT 
+    p.nombre,
+    SUM(dv.cantidad) AS total_vendido,
+    i.cantidad_disponible
+FROM producto p
+JOIN detalle_venta dv ON p.id_producto = dv.id_producto
+JOIN inventario i ON p.id_producto = i.id_producto
+GROUP BY p.id_producto, p.nombre, i.cantidad_disponible
+ORDER BY total_vendido DESC, i.cantidad_disponible ASC;
+-- 89. Identificar empleados con mayor producción pero menores costos asociados.
+SELECT 
+    e.nombre,
+    e.apellido,
+    SUM(pr.cantidad_producida) AS total_producido,
+    COALESCE(SUM(c.monto), 0) AS total_costos
+FROM empleado e
+LEFT JOIN produccion pr ON e.id_empleado = pr.id_empleado
+LEFT JOIN costos c ON e.id_empleado = c.id_empleado
+GROUP BY e.id_empleado, e.nombre, e.apellido
+ORDER BY total_producido DESC, total_costos ASC;
+-- 90. Máquinas con alto costo de mantenimiento pero baja utilización.
+SELECT 
+    m.id_maquinaria,
+    m.nombre,
+    COALESCE(SUM(mm.costo), 0) AS total_mantenimiento,
+    COUNT(DISTINCT p.id_produccion) AS veces_usada_en_produccion
+FROM maquinaria m
+LEFT JOIN mantenimiento_maquinaria mm 
+    ON m.id_maquinaria = mm.id_maquinaria
+LEFT JOIN produccion p 
+    ON m.id_maquinaria = p.id_maquinaria
+GROUP BY m.id_maquinaria, m.nombre
+ORDER BY total_mantenimiento DESC, veces_usada_en_produccion ASC;
+
+-- 91. Total de productos vendidos por tipo de producto**
+-- Muestra cuántas unidades se han vendido por cada categoría de producto (agrícola, ganadero o procesado), ayudando a identificar qué tipo de producción es más rentable.
+SELECT p.tipo, 
+    SUM(dv.cantidad) AS total_vendido
+FROM producto p
+JOIN detalle_venta dv ON p.id_producto = dv.id_producto
+GROUP BY p.tipo;
+-- 92. Empleado con mayor producción acumulada**
+-- Identifica al empleado que ha producido la mayor cantidad total de productos en el sistema, útil para reconocer el desempeño individual.
+SELECT e.id_empleado, e.nombre, e.apellido, total_producido
+FROM (
+    SELECT id_empleado, SUM(cantidad_producida) AS total_producido
+    FROM produccion
+    GROUP BY id_empleado
+) AS prod
+JOIN empleado e ON prod.id_empleado = e.id_empleado
+ORDER BY total_producido DESC
+LIMIT 1;
+-- 93. Cliente que más ha comprado**
+-- Presenta el cliente con el mayor valor acumulado en compras, lo cual es clave para estrategias de fidelización o descuentos.
+SELECT c.id_cliente, c.nombre, total_compras
+FROM (
+    SELECT v.id_cliente, SUM(v.total) AS total_compras
+    FROM venta v
+    GROUP BY v.id_cliente
+) AS compras
+JOIN cliente c ON compras.id_cliente = c.id_cliente
+ORDER BY total_compras DESC
+LIMIT 1;
+-- 94. Productos con inventario por debajo del promedio general**
+-- Detecta qué productos tienen menos existencias que el promedio general del inventario, útil para reabastecimiento o promoción.
+SELECT p.id_producto, p.nombre, i.cantidad_disponible
+FROM inventario i
+JOIN producto p ON i.id_producto = p.id_producto
+WHERE i.cantidad_disponible < (
+    SELECT AVG(cantidad_disponible) FROM inventario
+);
+-- 95. Producción total agrupada por mes
+-- Muestra la cantidad total producida mensualmente para observar patrones estacionales o evaluar la eficiencia de producción.
+SELECT DATE_FORMAT(fecha_produccion, '%Y-%m') AS mes, 
+    SUM(cantidad_producida) AS total_producido
+FROM produccion
+GROUP BY DATE_FORMAT(fecha_produccion, '%Y-%m')
+ORDER BY mes;
+-- 96. Promedio de costo por tipo de maquinaria utilizada**
+-- Calcula el costo operativo promedio según el tipo de maquinaria, ayudando a identificar equipos más costosos de mantener.
+SELECT tipo, 
+    ROUND(AVG(promedio_por_maquina), 2) AS promedio_costo_tipo
+FROM (
+    SELECT m.tipo, m.id_maquinaria, AVG(c.monto) AS promedio_por_maquina
+    FROM costos c
+    JOIN maquinaria m ON c.id_maq = m.id_maquinaria
+    GROUP BY m.tipo, m.id_maquinaria
+) AS costos_promedio
+GROUP BY tipo;
+-- 97. Producto más vendido en cantidad**
+-- Determina cuál ha sido el producto más vendido en términos de unidades, lo cual orienta decisiones de producción y marketing.
+SELECT p.id_producto, p.nombre, total_vendido
+FROM (
+    SELECT id_producto, SUM(cantidad) AS total_vendido
+    FROM detalle_venta
+    GROUP BY id_producto
+) AS ventas
+JOIN producto p ON ventas.id_producto = p.id_producto
+ORDER BY total_vendido DESC
+LIMIT 1;
+-- 98. Ventas mensuales por tipo de producto**
+-- Resume el total de ventas por categoría de producto cada mes, útil para análisis de mercado y tendencias de consumo.
+SELECT ventas_por_mes.mes,
+    ventas_por_mes.tipo,
+    SUM(ventas_por_mes.total_producto) AS total_ventas
+FROM (
+    SELECT DATE_FORMAT(v.fecha_venta, '%Y-%m') AS mes,
+        p.tipo,
+           (dv.cantidad * dv.precio_unitario) AS total_producto
+    FROM venta v
+    JOIN detalle_venta dv ON v.id_venta = dv.id_venta
+    JOIN producto p ON dv.id_producto = p.id_producto
+) AS ventas_por_mes
+GROUP BY ventas_por_mes.mes, ventas_por_mes.tipo
+ORDER BY ventas_por_mes.mes, total_ventas DESC;
+-- 99. Promedio de duración de actividades por área**
+-- Evalúa cuánto tiempo en promedio se dedica a cada área de trabajo, como logística, cultivo u ordeño, lo cual puede revelar sobrecargas o cuellos de botella.
+SELECT promedio_area.area,
+    ROUND(promedio_area.promedio_horas, 2) AS promedio_horas
+FROM (
+    SELECT area,
+        AVG(duracion_horas) AS promedio_horas
+    FROM actividad_laboral
+    GROUP BY area
+) AS promedio_area
+ORDER BY promedio_area.promedio_horas DESC;
+-- 100. Productos más comprados a proveedores**
+-- Lista los productos más adquiridos en compras, útil para gestionar relaciones con proveedores y ajustar compras futuras.
+SELECT p.id_producto, p.nombre, total_comprado
+FROM (
+    SELECT id_producto, SUM(cantidad) AS total_comprado
+    FROM detalle_compra
+    GROUP BY id_producto
+) AS compras
+JOIN producto p ON compras.id_producto = p.id_producto
+ORDER BY total_comprado DESC;
