@@ -193,3 +193,285 @@ DELIMITER ;
 DROP FUNCTION costo_por_unidad_producida;
 
 SELECT costo_por_unidad_producida(2);
+
+-- 11. productos sin ventas 
+
+DELIMITER $$
+
+CREATE FUNCTION productos_sin_ventas()
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE total_sin_ventas INT;
+
+    SELECT COUNT(*) INTO total_sin_ventas
+    FROM producto p
+    WHERE p.id_producto NOT IN (
+        SELECT DISTINCT dv.id_producto
+        FROM detalle_venta dv
+    );
+
+    RETURN total_sin_ventas;
+END$$
+
+DELIMITER ;
+
+SELECT productos_sin_ventas() AS total_sin_ventas;
+
+-- 12. monto_total_ventas_periodo
+DELIMITER $$
+
+CREATE FUNCTION monto_total_ventas(
+    p_fecha_venta DATE
+)
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+BEGIN
+    DECLARE suma_total DECIMAL(10,2);
+
+    SELECT IFNULL(SUM(total), 0)
+    INTO suma_total
+    FROM venta
+    WHERE fecha_venta = p_fecha_venta;
+
+    RETURN suma_total;
+END$$
+
+DELIMITER ;
+
+SELECT monto_total_ventas('2025-07-28') AS total_ventas;
+
+-- 13. productos_por_tipo(tipo_producto)
+DELIMITER $$
+
+CREATE FUNCTION productos_por_tipo(
+    p_tipo VARCHAR(50)
+)
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE total_productos INT;
+
+    SELECT COUNT(*) 
+    INTO total_productos
+    FROM producto
+    WHERE tipo = p_tipo;
+
+    RETURN total_productos;
+END$$
+
+DELIMITER ;
+
+SELECT productos_por_tipo('agrícola') AS total_agricolas;
+SELECT productos_por_tipo('ganadero') AS total_ganaderos;
+SELECT productos_por_tipo('procesado') AS total_procesados;
+
+-- 14. empleados_por_area(area_asignada)
+
+DELIMITER $$
+
+CREATE FUNCTION empleados_por_area(
+    p_area_asignada VARCHAR(50)
+)
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE total_empleados INT;
+
+    SELECT COUNT(*) 
+    INTO total_empleados
+    FROM empleado
+    WHERE area_asignada = p_area_asignada;
+
+    RETURN total_empleados;
+END$$
+
+DELIMITER ;
+
+SELECT empleados_por_area('cultivo') AS total_cultivo;
+SELECT empleados_por_area('logística') AS total_logistica;
+
+-- 15. maquinaria_en_uso_actual
+
+DELIMITER $$
+
+CREATE FUNCTION maquinaria_en_uso_actual()
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE total_maquinarias INT;
+
+    SELECT COUNT(*)
+    INTO total_maquinarias
+    FROM maquinaria
+    WHERE estado = 'operativa';
+
+    RETURN total_maquinarias;
+END$$
+
+DELIMITER ;
+
+SELECT maquinaria_en_uso_actual() AS total_operativas;
+
+-- 16. ganancia_neta_mensual
+
+DELIMITER $$
+
+CREATE FUNCTION ganancia_neta_mensual(
+    p_anio INT,
+    p_mes INT
+)
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+BEGIN
+    DECLARE total_ventas DECIMAL(10,2);
+    DECLARE total_compras DECIMAL(10,2);
+    DECLARE ganancia_neta DECIMAL(10,2);
+
+    -- Total de ventas del mes
+    SELECT IFNULL(SUM(total), 0)
+    INTO total_ventas
+    FROM venta
+    WHERE YEAR(fecha_venta) = p_anio
+      AND MONTH(fecha_venta) = p_mes;
+
+    -- Total de compras del mes
+    SELECT IFNULL(SUM(total), 0)
+    INTO total_compras
+    FROM compra
+    WHERE YEAR(fecha_compra) = p_anio
+      AND MONTH(fecha_compra) = p_mes;
+
+    -- Calcular ganancia neta
+    SET ganancia_neta = total_ventas - total_compras;
+
+    RETURN ganancia_neta;
+END$$
+
+DELIMITER ;
+
+
+SELECT ganancia_neta_mensual(2025, 7) AS ganancia;
+
+-- 17. actividad_mas_frecuente_empleado
+
+DELIMITER $$
+
+CREATE FUNCTION actividad_mas_frecuente_empleado(
+    p_id_empleado INT
+)
+RETURNS VARCHAR(255)
+DETERMINISTIC
+BEGIN
+    DECLARE actividad_frecuente VARCHAR(255);
+
+    SELECT descripcion
+    INTO actividad_frecuente
+    FROM actividad_laboral
+    WHERE id_empleado = p_id_empleado
+    GROUP BY descripcion
+    ORDER BY COUNT(*) DESC
+    LIMIT 1;
+
+    RETURN actividad_frecuente;
+END$$
+
+DELIMITER ;
+
+SELECT actividad_mas_frecuente_empleado(56) AS actividad_mas_frecuente;
+
+
+
+-- 18. cantidad_veces_maquinaria_usada
+DELIMITER //
+
+CREATE FUNCTION cantidad_veces_maquinaria_usada(maquinaria_id INT) 
+RETURNS INT
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+    DECLARE total_usos INT DEFAULT 0;
+    
+    -- Contar usos en empleado_maquinaria
+    SELECT COUNT(*) INTO total_usos
+    FROM empleado_maquinaria
+    WHERE id_maquinaria = maquinaria_id;
+    
+    -- Sumar usos en produccion (si no es NULL)
+    SELECT total_usos + COUNT(*) INTO total_usos
+    FROM produccion
+    WHERE id_maquinaria = maquinaria_id AND id_maquinaria IS NOT NULL;
+    
+    RETURN total_usos;
+END //
+
+DELIMITER ;
+
+
+SELECT cantidad_veces_maquinaria_usada(150) AS veces_usada;
+
+
+-- 19. promedio_precio_compra_producto
+
+DELIMITER //
+
+CREATE FUNCTION promedio_precio_compra_producto(producto_id INT) 
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+    DECLARE precio_promedio DECIMAL(10,2) DEFAULT 0.00;
+    
+    -- Calcular el promedio de precio_unitario para el producto en todas las compras
+    SELECT IFNULL(AVG(dc.precio_unitario), 0) INTO precio_promedio
+    FROM detalle_compra dc
+    WHERE dc.id_producto = producto_id;
+    
+    RETURN precio_promedio;
+END //
+
+DELIMITER ;
+
+SELECT promedio_precio_compra_producto(6) AS precio_promedio_compra;
+
+-- 20. porcentaje_utilizacion_maquinaria
+DELIMITER //
+
+CREATE FUNCTION porcentaje_utilizacion_maquinaria(maquinaria_id INT) 
+RETURNS DECIMAL(5,2)
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+    DECLARE dias_operativos INT;
+    DECLARE dias_totales INT;
+    DECLARE porcentaje DECIMAL(5,2) DEFAULT 0.00;
+    
+    -- Calcular días operativos (producciones + operaciones de empleados)
+    SELECT COUNT(DISTINCT fecha_operacion) INTO dias_operativos
+    FROM (
+        SELECT fecha_operacion 
+        FROM empleado_maquinaria 
+        WHERE id_maquinaria = maquinaria_id
+        
+        UNION
+        
+        SELECT fecha_produccion AS fecha_operacion
+        FROM produccion
+        WHERE id_maquinaria = maquinaria_id
+    ) AS operaciones;
+    
+    -- Calcular días totales desde la adquisición hasta hoy
+    SELECT DATEDIFF(CURRENT_DATE(), fecha_adquisicion) + 1 INTO dias_totales
+    FROM maquinaria
+    WHERE id_maquinaria = maquinaria_id;
+    
+    -- Calcular porcentaje 
+    IF dias_totales > 0 THEN
+        SET porcentaje = (dias_operativos * 100.0) / dias_totales;
+    END IF;
+    
+    RETURN porcentaje;
+END //
+
+DELIMITER ;
+SELECT porcentaje_utilizacion_maquinaria(140) AS porcentaje_utilizacion;
