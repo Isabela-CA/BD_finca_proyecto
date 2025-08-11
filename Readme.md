@@ -79,9 +79,13 @@ el repositorio esta organizado de la siguiente manera:
 **5. Ejecutar los demás scripts según necesidad:**
 
 *SOURCE ruta/dql_select.sql;         -- Consultas*
+
 *SOURCE ruta/dql_procedimientos.sql; -- Procedimientos almacenados*
+
 *SOURCE ruta/dql_funciones.sql;      -- Funciones*
+
 *SOURCE ruta/dql_triggers.sql;       -- Triggers*
+
 *SOURCE ruta/dql_eventos.sql;        -- Eventos*
 
 **6. Verificar carga de tablas:**
